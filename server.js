@@ -23,14 +23,33 @@ import createTestUser from './scripts/createTestUser.js';
 const app = express();
 
 // Security middleware
+// Derive allowed public URLs for CSP from environment
+const apiPublicUrl = process.env.API_PUBLIC_URL || '';
+const extraConnectSrc = apiPublicUrl ? [apiPublicUrl] : [];
+const extraImgSrc = apiPublicUrl ? [apiPublicUrl] : [];
+
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "http://127.0.0.1:*", "https://*.razorpay.com"],
+      imgSrc: [
+        "'self'",
+        "data:",
+        "blob:",
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://*.razorpay.com",
+        ...extraImgSrc,
+      ],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://checkout.razorpay.com"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      connectSrc: ["'self'", "http://localhost:*", "http://127.0.0.1:*", "https://*.razorpay.com"],
+      connectSrc: [
+        "'self'",
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+        "https://*.razorpay.com",
+        ...extraConnectSrc,
+      ],
       frameSrc: ["'self'", "https://*.razorpay.com"]
     },
   },
@@ -46,8 +65,8 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// CORS configuration with strict origin validation
-const allowedOrigins = [
+// CORS configuration with strict origin validation (supports env)
+const defaultAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001', 
   'http://localhost:3002',
@@ -61,6 +80,14 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://127.0.0.1:5174'
 ];
+
+// Provide additional origins via CORS_ORIGINS (comma-separated), e.g. https://your-app.vercel.app,https://api.example.com
+const envAllowedOrigins = (process.env.CORS_ORIGINS || '')
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean);
+
+const allowedOrigins = [...defaultAllowedOrigins, ...envAllowedOrigins];
 
 app.use(cors({
   origin: (origin, callback) => {
