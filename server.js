@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -125,16 +126,12 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files (uploaded images) with security headers
-app.use('/uploads', (req, res, next) => {
-  // Add security headers for uploaded files
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-  next();
-}, express.static('uploads'));
+// Static serve uploads (minimal)
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Health check endpoint
+
+
 app.get('/health', (req, res) => {
   res.json({
     success: true,

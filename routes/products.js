@@ -7,6 +7,9 @@ import fs from 'fs';
 
 const router = express.Router();
 
+// Normalize any filesystem path to URL-safe forward slashes
+const toForwardSlashes = (value) => (value || '').replace(/\\/g, '/');
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -148,6 +151,25 @@ const validateProductInput = (req, res, next) => {
       message: 'Missing required fields: name, description, price, category, and stock are required'
     });
   }
+
+  // Require at least one product image (new uploads or existing)
+  try {
+    const hasNewFiles = Array.isArray(req.files) && req.files.length > 0;
+    let hasExisting = false;
+    if (typeof req.body.existingImages === 'string' && req.body.existingImages.trim().length > 0) {
+      const parsedExisting = JSON.parse(req.body.existingImages);
+      hasExisting = Array.isArray(parsedExisting) && parsedExisting.length > 0;
+    }
+    if (!hasNewFiles && !hasExisting) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one product image is required'
+      });
+    }
+  } catch (e) {
+    console.error('existingImages parse error:', e);
+    return res.status(400).json({ success: false, message: 'Invalid existingImages format' });
+  }
   
   // Type validation
   if (typeof name !== 'string' || name.trim().length === 0) {
@@ -222,8 +244,8 @@ router.post('/', protect, authorize('admin'), upload.array('images', 4), validat
       isAvailable,
     } = req.body;
 
-    // Handle uploaded images
-    const images = req.files ? req.files.map(file => file.path) : [];
+    // Handle uploaded images (normalize Windows paths to URL-friendly)
+    const images = req.files ? req.files.map(file => toForwardSlashes(file.path)) : [];
     console.log('Uploaded images for new product:', images);
 
     const productData = {
@@ -308,7 +330,7 @@ router.put('/:id', protect, authorize('admin'), upload.array('images', 4), valid
     } = req.body;
 
     // Handle new uploaded images
-    const newImages = req.files ? req.files.map(file => file.path) : [];
+    const newImages = req.files ? req.files.map(file => toForwardSlashes(file.path)) : [];
     console.log('New uploaded images:', newImages);
     
     // Handle existing images from frontend
@@ -316,6 +338,10 @@ router.put('/:id', protect, authorize('admin'), upload.array('images', 4), valid
     if (existingImages) {
       try {
         existingImagesArray = JSON.parse(existingImages);
+        // Normalize any existing image paths that may contain backslashes from old records
+        existingImagesArray = Array.isArray(existingImagesArray)
+          ? existingImagesArray.map(img => toForwardSlashes(img))
+          : [];
         console.log('Existing images from frontend:', existingImagesArray);
       } catch (error) {
         console.error('Error parsing existing images:', error);
