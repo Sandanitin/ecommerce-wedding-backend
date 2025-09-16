@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -146,6 +147,14 @@ const uploadsDir = process.env.UPLOADS_DIR
     ? process.env.UPLOADS_DIR
     : path.join(process.cwd(), process.env.UPLOADS_DIR)
   : path.join(process.cwd(), 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+if (!fs.existsSync(path.join(uploadsDir, 'products'))) {
+  fs.mkdirSync(path.join(uploadsDir, 'products'), { recursive: true });
+}
 
 app.use('/uploads', express.static(uploadsDir, {
   maxAge: '7d',

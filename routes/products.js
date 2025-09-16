@@ -245,7 +245,11 @@ router.post('/', protect, authorize('admin'), upload.array('images', 4), validat
     } = req.body;
 
     // Handle uploaded images (normalize Windows paths to URL-friendly)
-    const images = req.files ? req.files.map(file => toForwardSlashes(file.path)) : [];
+    const images = req.files ? req.files.map(file => {
+      const normalizedPath = toForwardSlashes(file.path);
+      // For production, ensure the path starts with /uploads for proper serving
+      return normalizedPath.startsWith('uploads/') ? `/${normalizedPath}` : `/uploads/products/${file.filename}`;
+    }) : [];
     console.log('Uploaded images for new product:', images);
 
     const productData = {
@@ -330,7 +334,11 @@ router.put('/:id', protect, authorize('admin'), upload.array('images', 4), valid
     } = req.body;
 
     // Handle new uploaded images
-    const newImages = req.files ? req.files.map(file => toForwardSlashes(file.path)) : [];
+    const newImages = req.files ? req.files.map(file => {
+      const normalizedPath = toForwardSlashes(file.path);
+      // For production, ensure the path starts with /uploads for proper serving
+      return normalizedPath.startsWith('uploads/') ? `/${normalizedPath}` : `/uploads/products/${file.filename}`;
+    }) : [];
     console.log('New uploaded images:', newImages);
     
     // Handle existing images from frontend
