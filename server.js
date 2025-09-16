@@ -91,7 +91,21 @@ const envAllowedOrigins = (process.env.CORS_ORIGINS || '')
   .map(s => s.trim())
   .filter(Boolean);
 
-const allowedOrigins = [...defaultAllowedOrigins, ...envAllowedOrigins];
+// FRONTEND_URL is a single allowed origin for production frontends
+const frontendUrl = (process.env.FRONTEND_URL || '').trim();
+
+// Vercel provides VERCEL_URL without protocol; normalize it if present
+const vercelUrl = (process.env.VERCEL_URL || '').trim();
+const normalizedVercelOrigin = vercelUrl
+  ? (vercelUrl.startsWith('http') ? vercelUrl : `https://${vercelUrl}`)
+  : '';
+
+const allowedOrigins = [
+  ...defaultAllowedOrigins,
+  ...envAllowedOrigins,
+  ...(frontendUrl ? [frontendUrl] : []),
+  ...(normalizedVercelOrigin ? [normalizedVercelOrigin] : []),
+];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -126,8 +140,17 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static serve uploads (minimal)
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Static serve uploads with caching; support configurable uploads directory
+const uploadsDir = process.env.UPLOADS_DIR
+  ? path.isAbsolute(process.env.UPLOADS_DIR)
+    ? process.env.UPLOADS_DIR
+    : path.join(process.cwd(), process.env.UPLOADS_DIR)
+  : path.join(process.cwd(), 'uploads');
+
+app.use('/uploads', express.static(uploadsDir, {
+  maxAge: '7d',
+  immutable: true,
+}));
 
 // Health check endpoint
 
