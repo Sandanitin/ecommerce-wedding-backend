@@ -78,7 +78,10 @@ const defaultAllowedOrigins = [
   'http://127.0.0.1:5173',
   'http://127.0.0.1:4173',
   'http://localhost:5174',
-  'http://127.0.0.1:5174'
+  'http://127.0.0.1:5174',
+  // Production frontends on Vercel
+  'https://ecommerce-wedding.vercel.app',
+  'https://ecommerce-wedding-b2rmsobum-nithins-projects-1e3c272b.vercel.app'
 ];
 
 // Provide additional origins via CORS_ORIGINS (comma-separated), e.g. https://your-app.vercel.app,https://api.example.com
