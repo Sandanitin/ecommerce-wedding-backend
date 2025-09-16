@@ -3,6 +3,10 @@ import { config } from '../config.js';
 
 const createDefaultAdmin = async () => {
   try {
+    if (!config.defaultAdmin || !config.defaultAdmin.email || !config.defaultAdmin.password) {
+      console.warn('⚠️  DEFAULT_ADMIN_* env vars not set; skipping default admin creation')
+      return
+    }
     // Check if admin already exists
     const existingAdmin = await User.findOne({ 
       email: config.defaultAdmin.email 

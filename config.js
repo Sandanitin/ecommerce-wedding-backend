@@ -12,11 +12,11 @@ export const config = {
     user: process.env.EMAIL_USER || 'your-email@gmail.com',
     password: process.env.EMAIL_PASSWORD || 'your-app-password'
   },
-  // defaultAdmin: {
-  //   name: process.env.DEFAULT_ADMIN_NAME || 'Super Admin',
-  //   email: process.env.DEFAULT_ADMIN_EMAIL || 'admin@zepto.com',
-  //   password: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123'
-  // },
+  defaultAdmin: {
+    name: process.env.DEFAULT_ADMIN_NAME || '',
+    email: process.env.DEFAULT_ADMIN_EMAIL || '',
+    password: process.env.DEFAULT_ADMIN_PASSWORD || ''
+  },
   razorpay: {
     keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_YOUR_ACTUAL_KEY_ID',
     keySecret: process.env.RAZORPAY_KEY_SECRET || 'YOUR_ACTUAL_KEY_SECRET'
