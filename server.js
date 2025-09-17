@@ -58,17 +58,6 @@ app.use(helmet({
   // Allow cross-origin usage of static resources like images
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-// Rate limiting (applied AFTER CORS below). Skip OPTIONS to not break preflight
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    success: false,
-    message: 'Too many requests from this IP, please try again later.'
-  },
-  skip: (req) => req.method === 'OPTIONS' || req.path === '/health'
-});
-
 // CORS configuration with strict origin validation (supports env)
 const defaultAllowedOrigins = [
   'http://localhost:3000',
@@ -111,6 +100,17 @@ const allowedOrigins = [
 ];
 
 const isDevelopment = config.nodeEnv === 'development';
+
+// Rate limiting (applied AFTER CORS below). Skip OPTIONS to not break preflight
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: isDevelopment ? 1000 : 100, // More permissive in development
+  message: {
+    success: false,
+    message: 'Too many requests from this IP, please try again later.'
+  },
+  skip: (req) => req.method === 'OPTIONS' || req.path === '/health'
+});
 
 const corsOptions = {
   origin: (origin, callback) => {
