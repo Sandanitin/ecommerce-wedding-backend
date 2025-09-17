@@ -47,6 +47,18 @@ router.get('/dashboard', protect, authorize('admin'), async (req, res) => {
       ? ((currentMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
       : 0;
 
+    // Revenue by day for current month (used by admin UI line chart)
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const revenueByDay = {};
+    for (let day = 1; day <= daysInMonth; day++) {
+      revenueByDay[String(day)] = 0;
+    }
+    currentMonthEligible.forEach(o => {
+      const day = new Date(o.createdAt).getDate();
+      const key = String(day);
+      revenueByDay[key] = (revenueByDay[key] || 0) + (o.totalAmount || 0);
+    });
+
     const pendingOrders = orders.filter(o => o.status === 'pending').length;
     const completedOrders = orders.filter(o => o.status === 'delivered').length;
     const averageOrderValue = totalOrders
@@ -117,6 +129,7 @@ router.get('/dashboard', protect, authorize('admin'), async (req, res) => {
           averageOrderValue
         },
         revenueByMonth: monthlyRevenueMap,
+        revenueByDay,
         statusDistribution,
         topProducts,
         recentOrders

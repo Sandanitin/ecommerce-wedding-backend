@@ -55,17 +55,19 @@ app.use(helmet({
       frameSrc: ["'self'", "https://*.razorpay.com"]
     },
   },
+  // Allow cross-origin usage of static resources like images
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
-// Rate limiting
+// Rate limiting (applied AFTER CORS below). Skip OPTIONS to not break preflight
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
-  }
+  },
+  skip: (req) => req.method === 'OPTIONS' || req.path === '/health'
 });
-app.use(limiter);
 
 // CORS configuration with strict origin validation (supports env)
 const defaultAllowedOrigins = [
@@ -108,12 +110,20 @@ const allowedOrigins = [
   ...(normalizedVercelOrigin ? [normalizedVercelOrigin] : []),
 ];
 
-app.use(cors({
+const isDevelopment = config.nodeEnv === 'development';
+
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // In development, allow any origin to simplify local testing across ports/devices
+    if (isDevelopment) return callback(null, true);
+    
+    // Allow common local network origins in addition to explicit allowlist
+    const localNetworkRegex = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\\d+)?$/;
+
+    if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
       callback(null, true);
     } else {
       console.warn('CORS blocked request from origin:', origin);
@@ -131,11 +141,16 @@ app.use(cors({
     'Cache-Control',
     'Pragma'
   ],
-  optionsSuccessStatus: 200
-}));
+  optionsSuccessStatus: 200,
+};
 
-// Handle preflight requests
-app.options('*', cors());
+app.use(cors(corsOptions));
+
+// Handle preflight requests with the same CORS options
+app.options('*', cors(corsOptions));
+
+// Apply rate limiter after CORS so even throttled responses include CORS headers
+app.use(limiter);
 
 // Body parser middleware
 app.use(express.json({ limit: '10mb' }));
@@ -156,7 +171,11 @@ if (!fs.existsSync(path.join(uploadsDir, 'products'))) {
   fs.mkdirSync(path.join(uploadsDir, 'products'), { recursive: true });
 }
 
-app.use('/uploads', express.static(uploadsDir, {
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+}, express.static(uploadsDir, {
   maxAge: '7d',
   immutable: true,
 }));
